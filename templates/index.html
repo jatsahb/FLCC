@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NDN-FDRL Simulation System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1><i class="fas fa-network-wired"></i> NDN-FDRL Simulation System</h1>
+            <p class="subtitle">Named Data Networking with Federated Deep Reinforcement Learning</p>
+        </header>
+
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <div class="panel-section">
+                <h3><i class="fas fa-cog"></i> Simulation Configuration</h3>
+                <div class="config-grid">
+                    <div class="config-item">
+                        <label for="scenario-select">Congestion Scenario:</label>
+                        <select id="scenario-select" class="form-control">
+                            <option value="">Loading scenarios...</option>
+                        </select>
+                    </div>
+                    <div class="config-item">
+                        <label for="duration-input">Duration (seconds):</label>
+                        <input type="number" id="duration-input" class="form-control" value="300" min="60" max="3600">
+                    </div>
+                    <div class="config-item">
+                        <label for="domains-input">Network Domains:</label>
+                        <input type="number" id="domains-input" class="form-control" value="3" min="2" max="10">
+                    </div>
+                    <div class="config-item">
+                        <label for="nodes-input">Nodes per Domain:</label>
+                        <input type="number" id="nodes-input" class="form-control" value="5" min="3" max="15">
+                    </div>
+                </div>
+                <div class="control-buttons">
+                    <button id="start-btn" class="btn btn-primary">
+                        <i class="fas fa-play"></i> Start Simulation
+                    </button>
+                    <button id="stop-btn" class="btn btn-danger" disabled>
+                        <i class="fas fa-stop"></i> Stop Simulation
+                    </button>
+                    <button id="export-btn" class="btn btn-secondary" disabled>
+                        <i class="fas fa-download"></i> Export Results
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scenario Description -->
+        <div id="scenario-description" class="scenario-card" style="display: none;">
+            <h4><i class="fas fa-info-circle"></i> Scenario Details</h4>
+            <div class="scenario-content">
+                <div class="scenario-info">
+                    <p><strong>Description:</strong> <span id="scenario-desc"></span></p>
+                    <p><strong>Severity:</strong> <span id="scenario-severity" class="severity-badge"></span></p>
+                    <p><strong>Duration:</strong> <span id="scenario-duration"></span></p>
+                </div>
+                <div class="scenario-effects">
+                    <p><strong>Primary Effects:</strong></p>
+                    <ul id="scenario-effects-list"></ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Simulation Status -->
+        <div id="simulation-status" class="status-panel" style="display: none;">
+            <div class="status-header">
+                <h3><i class="fas fa-running"></i> Simulation Progress</h3>
+                <div class="phase-indicator">
+                    <span id="current-phase" class="phase-badge">Phase 1: Baseline</span>
+                </div>
+            </div>
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div id="progress-fill" class="progress-fill" style="width: 0%;"></div>
+                </div>
+                <span id="progress-text" class="progress-text">0%</span>
+            </div>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Network Latency</div>
+                    <div id="metric-latency" class="metric-value">-- ms</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Packet Loss</div>
+                    <div id="metric-loss" class="metric-value">-- %</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Cache Hit Rate</div>
+                    <div id="metric-cache" class="metric-value">-- %</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Throughput</div>
+                    <div id="metric-throughput" class="metric-value">-- Mbps</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Federated Learning Status -->
+        <div id="fl-status" class="fl-panel" style="display: none;">
+            <h3><i class="fas fa-brain"></i> Federated Learning Progress</h3>
+            <div class="fl-metrics">
+                <div class="fl-metric">
+                    <div class="fl-label">Current Round</div>
+                    <div id="fl-round" class="fl-value">0</div>
+                </div>
+                <div class="fl-metric">
+                    <div class="fl-label">Model Accuracy</div>
+                    <div id="fl-accuracy" class="fl-value">--</div>
+                </div>
+                <div class="fl-metric">
+                    <div class="fl-label">Training Loss</div>
+                    <div id="fl-loss" class="fl-value">--</div>
+                </div>
+                <div class="fl-metric">
+                    <div class="fl-label">Participants</div>
+                    <div id="fl-participants" class="fl-value">--</div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="training-chart" width="400" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Results Panel -->
+        <div id="results-panel" class="results-panel" style="display: none;">
+            <h3><i class="fas fa-chart-line"></i> Comparative Analysis</h3>
+            <div class="results-tabs">
+                <button class="tab-btn active" onclick="showTab('comparison')">Performance Comparison</button>
+                <button class="tab-btn" onclick="showTab('phase1')">Phase 1 Details</button>
+                <button class="tab-btn" onclick="showTab('phase2')">Phase 2 Details</button>
+                <button class="tab-btn" onclick="showTab('training')">Training History</button>
+            </div>
+            
+            <div id="comparison-tab" class="tab-content">
+                <div class="comparison-grid" id="comparison-metrics">
+                    <!-- Comparison metrics will be populated here -->
+                </div>
+            </div>
+            
+            <div id="phase1-tab" class="tab-content" style="display: none;">
+                <h4>Phase 1: Baseline Performance</h4>
+                <div id="phase1-details" class="phase-details">
+                    <!-- Phase 1 details will be populated here -->
+                </div>
+            </div>
+            
+            <div id="phase2-tab" class="tab-content" style="display: none;">
+                <h4>Phase 2: Federated Learning Enhanced</h4>
+                <div id="phase2-details" class="phase-details">
+                    <!-- Phase 2 details will be populated here -->
+                </div>
+            </div>
+            
+            <div id="training-tab" class="tab-content" style="display: none;">
+                <h4>Federated Learning Training Progress</h4>
+                <div class="chart-container">
+                    <canvas id="training-progress-chart" width="600" height="300"></canvas>
+                </div>
+                <div id="training-details" class="training-details">
+                    <!-- Training details will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>&copy; 2024 NDN-FDRL Research Project. Advanced simulation system for Named Data Networking with Federated Deep Reinforcement Learning.</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
